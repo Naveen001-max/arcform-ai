@@ -1,0 +1,19 @@
+{
+  "name": "arcform-ai",
+  "version": "3.0.0",
+  "description": "ARCFORM AI \u2014 Holographic 3D Structural Engineering Platform with Groq AI",
+  "main": "index.html",
+  "scripts": {
+    "start": "python3 -m http.server 8080",
+    "dev": "npx live-server --port=8080 --open=index.html"
+  },
+  "keywords": [
+    "structural-engineering",
+    "3d",
+    "threejs",
+    "tensorflow",
+    "groq",
+    "AI"
+  ],
+  "license": "MIT"
+}

@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ARCFORM AI v3 — Holographic Architecture Intelligence</title>
+
+<!-- ── External libraries (CDN, pinned versions) ── -->
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<!-- ── Application styles ── -->
+<link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+
+<!-- ── Aesthetic overlays ── -->
+<div id="scan"></div>
+<div id="vig"></div>
+
+<!-- ── 3D canvas + hand canvas ── -->
+<canvas id="c3d"></canvas>
+<canvas id="chand"></canvas>
+<video id="vid" autoplay muted playsinline></video>
+
+<!-- ── Cursor (hand tracking) ── -->
+<div id="cur"></div>
+<div id="cur-lbl"></div>
+
+<!-- ── Gesture collection overlay ── -->
+<div id="collect-overlay"></div>
+<div id="collect-label">
+  <div class="cl-gest" id="cl-gest">✋</div>
+  <div class="cl-inst" id="cl-inst">SHOW THIS GESTURE</div>
+  <div class="cl-count" id="cl-count">0 / 15 samples</div>
+</div>
+
+<!-- ── AI thinking spinner ── -->
+<div id="ai-think">
+  <div class="ai-spin"></div>
+  <span style="font-size:8.5px;color:rgba(180,77,255,.8);letter-spacing:.1em;" id="ai-think-txt">AI thinking…</span>
+</div>
+
+<!-- ════════════════════════════════════════════
+     LEFT TOOLBAR
+════════════════════════════════════════════ -->
+<div id="ltb">
+  <div class="llbl">VIEW</div>
+  <button class="lb on" id="v3d" onclick="setView('3d')">
+    <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>3D
+  </button>
+  <button class="lb" id="vtop" onclick="setView('top')">
+    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="1"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="12" y1="3" x2="12" y2="21"/></svg>TOP
+  </button>
+  <button class="lb" id="vfrt" onclick="setView('front')">
+    <svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="1"/></svg>FRT
+  </button>
+  <button class="lb" id="vsde" onclick="setView('side')">
+    <svg viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" rx="1"/></svg>SDE
+  </button>
+
+  <div class="lsep"></div>
+  <div class="llbl">ADD</div>
+  <button class="lb" onclick="openModal('beam')">
+    <svg viewBox="0 0 24 24"><rect x="2" y="9" width="20" height="6" rx="1"/></svg>BEAM
+  </button>
+  <button class="lb" onclick="openModal('column')">
+    <svg viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="20" rx="1"/></svg>COL
+  </button>
+  <button class="lb" onclick="openModal('wall')">
+    <svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="1"/></svg>WALL
+  </button>
+  <button class="lb" onclick="openModal('slab')">
+    <svg viewBox="0 0 24 24"><rect x="2" y="10" width="20" height="4" rx=".5"/></svg>SLAB
+  </button>
+  <button class="lb" onclick="openModal('frame')">
+    <svg viewBox="0 0 24 24"><line x1="4" y1="20" x2="4" y2="6"/><line x1="20" y1="20" x2="20" y2="6"/><line x1="4" y1="6" x2="20" y2="6"/></svg>FRAME
+  </button>
+  <button class="lb" onclick="openModal('arch')">
+    <svg viewBox="0 0 24 24"><path d="M2 18 Q12 4 22 18"/><line x1="2" y1="18" x2="22" y2="18"/></svg>ARCH
+  </button>
+  <button class="lb" onclick="openModal('truss')">
+    <svg viewBox="0 0 24 24"><line x1="2" y1="17" x2="22" y2="17"/><line x1="2" y1="10" x2="22" y2="10"/><line x1="2" y1="17" x2="7" y2="10"/><line x1="7" y1="10" x2="12" y2="17"/></svg>TRUSS
+  </button>
+
+  <div class="lsep"></div>
+  <div class="llbl">EDIT</div>
+  <button class="lb" onclick="dupSel()">
+    <svg viewBox="0 0 24 24"><rect x="8" y="8" width="13" height="13" rx="1"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>DUP
+  </button>
+  <button class="lb" onclick="delSel()">
+    <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>DEL
+  </button>
+  <button class="lb" onclick="linkEls()">
+    <svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>LINK
+  </button>
+  <button class="lb" onclick="toggleMoveCtl()">
+    <svg viewBox="0 0 24 24"><path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M12 12h.01"/></svg>MOVE
+  </button>
+
+  <div class="lsep"></div>
+  <div class="llbl">TOOLS</div>
+  <button class="lb" id="bsec" onclick="toggleSec()">
+    <svg viewBox="0 0 24 24"><rect x="6" y="4" width="12" height="16" rx="1"/><line x1="6" y1="12" x2="18" y2="12"/></svg>SEC
+  </button>
+  <button class="lb" id="bload" onclick="toggleLbar()">
+    <svg viewBox="0 0 24 24"><path d="M12 2v8m-3-3l3 3 3-3"/><line x1="4" y1="14" x2="20" y2="14"/><path d="M6 14v4m4-4v4m4-4v4m4-4v4"/></svg>LOAD
+  </button>
+  <button class="lb" id="bdiag" onclick="toggleDiag()">
+    <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>DIAG
+  </button>
+  <button class="lb" onclick="runAnalysis()">
+    <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21"/></svg>RUN
+  </button>
+  <button class="lb" onclick="frameAll()">
+    <svg viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/></svg>FIT
+  </button>
+
+  <div class="lsep"></div>
+  <div class="llbl">AI</div>
+  <button class="lb ai-b" id="bai" onclick="toggleAI()">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/></svg>AI
+  </button>
+  <button class="lb ml-b" id="bml" onclick="toggleML()">
+    <svg viewBox="0 0 24 24"><path d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18"/></svg>ML
+  </button>
+  <button class="lb" onclick="toggleHands()">
+    <svg viewBox="0 0 24 24"><path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg>HAND
+  </button>
+
+  <div class="lsep"></div>
+  <button class="lb" onclick="saveProject()">
+    <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>SAVE
+  </button>
+  <button class="lb" onclick="undoState()">
+    <svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>UNDO
+  </button>
+</div>
+
+<!-- ════════════════════════════════════════════
+     TOP BAR
+════════════════════════════════════════════ -->
+<div id="top">
+  <div style="display:flex;align-items:baseline;gap:0">
+    <div class="logo">ARCFORM</div>
+    <div class="logo-badge">AI</div>
+  </div>
+  <div class="logo-sub">HOLOGRAPHIC ARCHITECTURE INTELLIGENCE v3</div>
+  <div id="top-r">
+    <div class="ts"><div class="tv" id="ts-el">0</div><div class="tl">Elements</div></div>
+    <div class="ts"><div class="tv" id="ts-ut" style="color:var(--h2)">—</div><div class="tl">Util%</div></div>
+    <div class="ts"><div class="tv" id="ts-zm">1.00×</div><div class="tl">Zoom</div></div>
+    <div class="ts"><div class="tv" id="ts-st" style="color:var(--pu);font-size:8px;letter-spacing:.06em">ARCAI</div><div class="tl">Structure</div></div>
+    <div class="ts"><div class="tv" id="ts-ml" style="color:var(--h2)">0%</div><div class="tl">ML Acc</div></div>
+    <div class="tpill ai" id="hpill" onclick="toggleHands()"><div class="tdot"></div><span id="hptxt">Enable Hands</span></div>
+    <div class="tpill ai" onclick="toggleAI()">✦ AI Chat</div>
+    <div class="tpill" onclick="saveProject()">Save</div>
+    <div class="tpill" onclick="toggleHelp()" title="Keyboard shortcuts">?</div>
+  </div>
+</div>
+
+<!-- ── Keyboard help overlay ── -->
+<div id="help-overlay" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(0,2,5,.85);backdrop-filter:blur(4px);" onclick="if(event.target===this)toggleHelp()">
+  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,6,12,.97);border:1px solid rgba(0,212,255,.25);border-radius:8px;padding:24px 28px;min-width:320px;max-width:480px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <div style="font-size:10px;letter-spacing:.25em;color:var(--h);">KEYBOARD SHORTCUTS</div>
+      <div onclick="toggleHelp()" style="cursor:pointer;color:var(--t3);font-size:14px;">✕</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 20px;font-size:8px;">
+      <div style="color:var(--t3);padding:3px 0;border-bottom:1px solid rgba(0,212,255,.06)"><kbd style="background:rgba(0,212,255,.08);padding:1px 5px;border-radius:2px;color:var(--h)">← →</kbd> Move X</div>
+      <div style="color:var(--t3);padding:3px 0;border-bottom:1px solid rgba(0,212,255,.06)"><kbd style="background:rgba(0,212,255,.08);padding:1px 5px;border-radius:2px;color:var(--h)">↑ ↓</kbd> Move Z</div>
+      <div style="color:var(--t3);padding:3px 0;border-bottom:1px solid rgba(0,212,255,.06)"><kbd style="background:rgba(0,212,255,.08);padding:1px 5px;border-radius:2px;color:var(--h)">Alt+↑</kbd> Move UP</div>
+      <div style="color:var(--t3);padding:3px 0;border-bottom:1px solid rgba(0,212,255,.06)"><kbd style="background:rgba(0,212,255,.08);padding:1px 5px;border-radius:2px;color:var(--h)">Del</kbd> Delete</div>
+      <div style="color:var(--t3);padding:3px 0;border-bottom:1px solid rgba(0,212,255,.06)"><kbd style="background:rgba(0,212,255,.08);padding:1px 5px;border-radius:2px;color:var(--h)">Space</kbd> AI Chat</div>
+      <div style="color:var(--t3);padding:3px 0;border-bottom:1px solid rgba(0,212,255,.06)"><kbd style="background:rgba(0,212,255,.08);padding:1px 5px;border-radius:2px;color:var(--h)">F</kbd> Fit All</div>
+      <div style="color:var(--t3);padding:3px 0;border-bottom:1px solid rgba(0,212,255,.06)"><kbd style="background:rgba(0,212,255,.08);padding:1px 5px;border-radius:2px;color:var(--h)">Ctrl+Z</kbd> Undo</div>
+      <div style="color:var(--t3);padding:3px 0;border-bottom:1px solid rgba(0,212,255,.06)"><kbd style="background:rgba(0,212,255,.08);padding:1px 5px;border-radius:2px;color:var(--h)">Tab</kbd> Next element</div>
+      <div style="color:var(--t3);padding:3px 0"><kbd style="background:rgba(180,77,255,.08);padding:1px 5px;border-radius:2px;color:var(--pu)">Drag</kbd> Orbit</div>
+      <div style="color:var(--t3);padding:3px 0"><kbd style="background:rgba(180,77,255,.08);padding:1px 5px;border-radius:2px;color:var(--pu)">Scroll</kbd> Zoom</div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     BOTTOM BAR
+════════════════════════════════════════════ -->
+<div id="bot">
+  <div class="bk"><kbd>B</kbd>Beam</div>
+  <div class="bk"><kbd>C</kbd>Col</div>
+  <div class="bk"><kbd>G</kbd>Frame</div>
+  <div class="bk"><kbd>↵</kbd>Analyze</div>
+  <div class="bk"><kbd>D</kbd>Diagrams</div>
+  <div class="bk"><kbd>E</kbd>Section</div>
+  <div class="bk"><kbd>F</kbd>Fit All</div>
+  <div class="bk"><kbd>⌘Z</kbd>Undo</div>
+  <div class="bk"><kbd>Del</kbd>Delete</div>
+  <div class="bk"><kbd>Space</kbd>AI Chat</div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     AI CHAT PANEL
+════════════════════════════════════════════ -->
+<div id="ai-panel">
+  <div id="ai-hdr">
+    <div>
+      <div id="ai-title">✦ ARCFORM AI</div>
+      <div id="ai-sub">Groq Llama-3.3-70b · Structural Intelligence</div>
+    </div>
+    <div class="ai-close" onclick="toggleAI()">✕</div>
+  </div>
+  <div id="ai-key-row">
+    <input id="ai-key-inp" type="password" placeholder="Groq API key (free at console.groq.com) …" autocomplete="off"/>
+    <button class="aib" onclick="saveGroqKey()">Save</button>
+    <button class="aib" onclick="clearGroqKey()" style="color:rgba(255,80,80,.6)">✕</button>
+    <span id="ai-key-status"></span>
+  </div>
+  <div id="ai-msgs"></div>
+  <div class="ai-sugs" id="ai-sugs"></div>
+  <div id="ai-inp-row">
+    <textarea id="ai-inp" placeholder="Build an iconic bridge 700m long with viewpoint…" rows="2"></textarea>
+    <button id="ai-send" onclick="sendAI()">SEND</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     ML TRAINING PANEL
+════════════════════════════════════════════ -->
+<div id="ml-panel">
+  <div id="ml-hdr">
+    <div id="ml-title">⊞ GESTURE ML TRAINING</div>
+    <div id="ml-sub">TensorFlow.js · MLP · Online Learning</div>
+  </div>
+  <div id="ml-body">
+    <div class="ml-sec">Model Status</div>
+    <div class="accuracy-display">
+      <div class="acc-val" id="ml-acc">—</div>
+      <div class="acc-lbl">VALIDATION ACCURACY</div>
+    </div>
+    <div class="prog-bar"><div class="prog-fill" id="ml-prog" style="width:0%"></div></div>
+    <div class="ml-stat"><span class="ml-sl">Training Samples</span><span class="ml-sv" id="ml-total">0</span></div>
+    <div class="ml-stat"><span class="ml-sl">Mode</span><span class="ml-sv" id="ml-mode">Rule-based</span></div>
+    <div class="ml-sec">Collect Gesture Samples</div>
+    <div style="font-size:7.5px;color:var(--t3);line-height:1.6;margin-bottom:6px;">
+      Enable hands, then click each gesture below to collect 15+ samples.
+    </div>
+    <div class="gesture-grid" id="gest-grid"></div>
+    <div class="ml-btn active" id="ml-train-btn" onclick="trainGestureModel()" style="margin-top:8px;">▶ TRAIN MODEL NOW</div>
+    <div class="ml-btn" onclick="clearGestureData()" style="margin-top:4px;color:var(--er);border-color:rgba(255,51,85,.25);">✕ CLEAR ALL DATA</div>
+    <div class="ml-sec" style="margin-top:8px;">Architecture</div>
+    <div style="font-size:7.5px;color:var(--t3);line-height:1.7;">
+      <strong style="color:var(--h2)">MLP:</strong> 63→128→64→32→9 classes<br>
+      <strong style="color:var(--h2)">Input:</strong> 21 hand landmarks (x,y,z) normalized<br>
+      <strong style="color:var(--h2)">Optimizer:</strong> Adam + dropout<br>
+      <strong style="color:var(--h2)">Training:</strong> 50 epochs, 80/20 split
+    </div>
+  </div>
+</div>
+
+<!-- ── Move controls ── -->
+<div id="movectl">
+  <div class="mc-label">MOVE ELEMENT</div>
+  <div class="mc-row"><div></div><div class="mc-btn" onclick="moveSel(0,1,0,S.snap||.5)" style="color:rgba(70,255,140,.7)">↑Y</div><div></div></div>
+  <div class="mc-row">
+    <div class="mc-btn" onclick="moveSel(-1,0,0,S.snap||.5)">←X</div>
+    <div class="mc-btn" onclick="moveSel(0,0,-1,S.snap||.5)">↑Z</div>
+    <div class="mc-btn" onclick="moveSel(1,0,0,S.snap||.5)">→X</div>
+  </div>
+  <div class="mc-row"><div class="mc-btn" onclick="moveSel(0,-1,0,S.snap||.5)" style="color:rgba(70,255,140,.7)">↓Y</div><div class="mc-btn" onclick="moveSel(0,0,1,S.snap||.5)">↓Z</div></div>
+  <div class="mc-label" style="margin-top:5px;">ROTATE</div>
+  <div class="mc-row">
+    <div class="mc-btn" onclick="rotateSel('y',-15)" style="font-size:9px">↺Y</div>
+    <div class="mc-btn" onclick="rotateSel('x',15)"  style="font-size:9px">↑X</div>
+    <div class="mc-btn" onclick="rotateSel('y', 15)" style="font-size:9px">↻Y</div>
+  </div>
+  <div class="mc-row">
+    <div class="mc-btn" onclick="rotateSel('y',90)" style="font-size:8px">90°</div>
+    <div class="mc-btn" onclick="resetRotation()"   style="font-size:8px;color:rgba(0,212,255,.5)">⊙R</div>
+  </div>
+  <div class="mc-label" style="margin-top:5px;">CAMERA</div>
+  <div class="mc-row"><div class="mc-btn" onclick="panBy(0,-40)">▲</div></div>
+  <div class="mc-row">
+    <div class="mc-btn" onclick="panBy(-40,0)">◀</div>
+    <div class="mc-btn" onclick="resetView()" style="font-size:8px;color:rgba(0,212,255,.5)">⊙</div>
+    <div class="mc-btn" onclick="panBy(40,0)">▶</div>
+  </div>
+  <div class="mc-row"><div class="mc-btn" onclick="panBy(0,40)">▼</div></div>
+</div>
+
+<!-- ── Right panel ── -->
+<div id="rp">
+  <div class="rph"><div class="rpt" id="rpt">ELEMENT</div><div class="rpx" onclick="document.getElementById('rp').classList.remove('open')">✕</div></div>
+  <div class="rpb" id="rpb"></div>
+</div>
+
+<!-- ── Diagrams ── -->
+<div id="dg">
+  <div class="dw"><div class="dl">Bending Moment</div><canvas id="bmd"></canvas></div>
+  <div class="dw"><div class="dl">Shear Force</div><canvas id="sfd"></canvas></div>
+  <div class="dw"><div class="dl">Deflected Shape</div><canvas id="dfd"></canvas></div>
+</div>
+
+<!-- ── Section editor ── -->
+<div id="seced">
+  <div class="set">Section Properties</div>
+  <div class="ser"><span class="sel2">Width b</span><input type="range" class="sesl" id="slb" min=".1" max="2" step=".05" value=".35" oninput="uSec('b',this.value)"><span class="sev" id="svb">35cm</span></div>
+  <div class="ser"><span class="sel2">Depth h</span><input type="range" class="sesl" id="slh" min=".1" max="3" step=".05" value=".65" oninput="uSec('h',this.value)"><span class="sev" id="svh">65cm</span></div>
+  <div class="ser"><span class="sel2">Dead G</span><input type="range" class="sesl" id="slG" min="1" max="20" step=".5" value="5" oninput="uLoad('G',this.value)"><span class="sev" id="svG">5kN/m</span></div>
+  <div class="ser"><span class="sel2">Live Q</span><input type="range" class="sesl" id="slQ" min="0" max="15" step=".5" value="3" oninput="uLoad('Q',this.value)"><span class="sev" id="svQ">3kN/m</span></div>
+  <div style="margin-top:7px;padding-top:7px;border-top:1px solid rgba(0,212,255,.07)">
+    <div style="font-size:7.5px;color:rgba(0,212,255,.3);margin-bottom:5px">I=<span id="siI">—</span> W=<span id="siW">—</span></div>
+    <div onclick="runAnalysis()" style="text-align:center;padding:5px;background:rgba(0,212,255,.07);border:1px solid rgba(0,212,255,.2);border-radius:3px;font-size:8px;color:var(--h);cursor:pointer;">▶ RE-ANALYZE</div>
+  </div>
+</div>
+
+<!-- ── Load bar ── -->
+<div id="lbar">
+  <label>UDL kN/m</label><input id="lu" type="number" value="8">
+  <label>Point kN</label><input id="lp" type="number" value="20">
+  <label>@ m</label><input id="lpos" type="number" value="3">
+  <div class="lbb" onclick="applyUDL()">UDL</div>
+  <div class="lbb" onclick="applyPt()">POINT</div>
+  <div class="lbb" onclick="clrLoads()">CLEAR</div>
+</div>
+
+<!-- ── Minimap ── -->
+<canvas id="mm" width="100" height="75"></canvas>
+
+<!-- ── Snap controls ── -->
+<div id="snaps">
+  <div class="snb on" id="sn05" onclick="setSnap(.5)">0.5m</div>
+  <div class="snb" id="sn025" onclick="setSnap(.25)">0.25m</div>
+  <div class="snb" id="sn1" onclick="setSnap(1)">1m</div>
+  <div class="snb" id="sn0" onclick="setSnap(0)">OFF</div>
+</div>
+
+<!-- ── Context menu ── -->
+<div id="ctx">
+  <div class="ci" onclick="ctxDo('all')">Select All<kbd>⌘A</kbd></div>
+  <div class="ci" onclick="ctxDo('desel')">Deselect<kbd>Esc</kbd></div>
+  <div class="csep"></div>
+  <div class="ci" onclick="ctxDo('dup')">Duplicate<kbd>⇧D</kbd></div>
+  <div class="ci" onclick="ctxDo('ai')">✦ AI Optimize</div>
+  <div class="ci" onclick="ctxDo('analyze')">Analyze<kbd>↵</kbd></div>
+  <div class="csep"></div>
+  <div class="ci cdanger" onclick="ctxDo('del')">Delete<kbd>⌫</kbd></div>
+</div>
+
+<!-- ── Gesture HUD ── -->
+<div id="ghud">
+  <span id="gi" style="font-size:15px">✋</span>
+  <span id="gn" style="font-size:9px;color:var(--h);letter-spacing:.09em">—</span>
+  <span id="gd" style="font-size:8px;color:var(--t2)"></span>
+  <span class="gh-conf" id="gc"></span>
+  <span class="gh-ml-badge" id="gml" style="display:none">ML</span>
+</div>
+
+<!-- ── Toast + modal ── -->
+<div id="toast"></div>
+<div id="rad"></div>
+<div id="modal">
+  <div class="md">
+    <div class="mdt" id="mdt">ADD</div>
+    <div class="mdg" id="mdg"></div>
+    <div class="mda">
+      <button class="mcn" onclick="closeModal()">CANCEL</button>
+      <button class="mok" onclick="confirmAdd()">ADD</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     APPLICATION SCRIPTS — load order matters
+════════════════════════════════════════════ -->
+
+<!-- Layer 1: Core data & state -->
+<script src="src/core/state.js"></script>
+
+<!-- Layer 2: 3D renderer + NEW smooth camera -->
+<script src="src/renderer/three-engine.js"></script>
+<script src="src/renderer/camera.js"></script>
+
+<!-- Layer 3: AI engine modules -->
+<script src="src/ai/arcai-engine.js"></script>
+<script src="src/ai/knowledge-base.js"></script>
+<script src="src/ai/groq-client.js"></script>
+
+<!-- Layer 4: UI + init (wires everything together) -->
+<script src="src/ui/app.js"></script>
+
+<!-- Layer 5: Bootstrap camera controller after DOM is ready -->
+<script>
+// Wire the new CameraController into the app
+// (replaces the old raw event listeners that caused jitter)
+window.addEventListener('load', function() {
+  var canvas = document.getElementById('c3d');
+  if(typeof CameraController !== 'undefined' && typeof S !== 'undefined') {
+    CameraController.init(canvas, S.cam);
+    // Override resetView to use CameraController
+    window.resetView = function() { CameraController.reset(); };
+    // Override panBy to work with new system
+    window.panBy = function(dx, dy) { S.cam.x += dx; S.cam.y += dy; };
+    // Inject update call into render loop
+    var _origRender = window._renderFn;
+    // CameraController.update() is called in the render loop via THREE3D if wired
+    // Force it into animation frame
+    (function camLoop() {
+      CameraController.update();
+      requestAnimationFrame(camLoop);
+    })();
+  }
+});
+</script>
+
+</body>
+</html>
