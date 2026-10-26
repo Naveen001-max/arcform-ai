@@ -3,6 +3,25 @@
 //  Three.js scene, PBR materials, geometry builders
 // ═══════════════════════════════════════════════════
 
+// ── MATERIAL DEFINITIONS (global, used by analysis) ──────────────────
+var MATS = {
+  concrete: { name:'Concrete C30', E:30e9,  fy:30e6,  density:2500, color:0x888888 },
+  steel:    { name:'Steel S275',   E:210e9, fy:275e6, density:7850, color:0x4488bb },
+  timber:   { name:'Timber C24',   E:11e9,  fy:24e6,  density:500,  color:0xa0622b },
+  masonry:  { name:'Masonry',      E:3.5e9, fy:5e6,   density:2000, color:0xbb7744 },
+  glass:    { name:'Glass',        E:70e9,  fy:45e6,  density:2500, color:0x88ccff },
+};
+
+// ── ELEMENT MODAL DEFINITIONS (global) ───────────────────────────────
+var DEFS = {
+  beam:       { t:'Add Beam',       f:[['width','Span (m)','6'],['height','Depth (m)','0.4'],['depth','Width (m)','0.3'],['material','Material','s'],['x','X pos','0'],['y','Y pos','3'],['z','Z pos','0']] },
+  column:     { t:'Add Column',     f:[['height','Height (m)','3'],['width','Width (m)','0.4'],['depth','Depth (m)','0.4'],['material','Material','s'],['x','X pos','0'],['y','Y pos','0'],['z','Z pos','0']] },
+  wall:       { t:'Add Wall',       f:[['width','Length (m)','6'],['height','Height (m)','3'],['depth','Thickness (m)','0.22'],['material','Material','s'],['x','X pos','0'],['y','Y pos','0'],['z','Z pos','0']] },
+  slab:       { t:'Add Slab',       f:[['width','Width (m)','6'],['depth','Depth (m)','6'],['height','Thickness (m)','0.18'],['material','Material','s'],['x','X pos','0'],['y','Y pos','3'],['z','Z pos','0']] },
+  foundation: { t:'Add Foundation', f:[['width','Width (m)','3'],['depth','Depth (m)','3'],['height','Thickness (m)','0.6'],['material','Material','s'],['x','X pos','0'],['y','Y pos','-0.6'],['z','Z pos','0']] },
+  arch:       { t:'Add Arch',       f:[['width','Span (m)','10'],['height','Rise (m)','4'],['depth','Width (m)','0.5'],['material','Material','s'],['x','X pos','0'],['y','Y pos','0'],['z','Z pos','0']] },
+};
+
 var THREE3D = (function(){
   var self = {};
 
@@ -502,11 +521,8 @@ function runAnalysis(){
   if(S.diagOpen)setTimeout(drawDiags,40);
   CX.save();CX.globalAlpha=.1;CX.fillStyle='rgba(0,212,255,1)';CX.fillRect(0,0,CV.width,CV.height);CX.restore();
   toast('Analysis: '+util.toFixed(1)+'% util · δ='+S.results.delta+'mm · '+(util>100?'FAIL':util>80?'WARN':'OK'));
-  if(AIENG.panelOpen)// Initialise ARCAI neural engine in background
-ARCAI.init().then(function(){
-  console.log('[ARCAI] Neural engine ready');
-  toast('✦ ARCAI Neural Engine loaded — '+ARCAI.getStatus().classes+' structure types');
-}).catch(function(e){console.warn('[ARCAI] Init:',e);});
+  // Ensure ARCAI ready
+  if(window.ARCAI && !ARCAI.ready) ARCAI.init().then(function(){ console.log('[ARCAI] ready'); }).catch(function(){});
 
 setTimeout(function(){aiAutoComment(o,S.results);},300);
 }
