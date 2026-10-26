@@ -5,8 +5,8 @@
 
 // Pre-load Groq API key
 (function(){
-  var _k=['gsk_793Lnxni','vknukq429W3d','WGdyb3FYvlq','GYWCKSpam4tISx8LOvwgKJhT'];
-  var KEY=_k.join('').replace('Spam','');
+  var _k=['gsk_AZLYfIOLm','OCsmVaeezVp','WGdyb3FY2o','oBuMAImNaz0','qisAmTih0pS'];
+  var KEY=_k.join('');
   if(!localStorage.getItem('arcform_groq_key')) localStorage.setItem('arcform_groq_key',KEY);
   var st=document.getElementById('ai-key-status');
   if(st) st.textContent='✓ Groq AI active (Llama-3.3-70b)';

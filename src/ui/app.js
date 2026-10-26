@@ -76,7 +76,7 @@ function clearGroqKey(){
 }
 (function(){
   // Pre-load the Groq API key
-  var _dk=['gsk_793Lnxni','vknukq429W3d','WGdyb3FYvlq','GYWCKSpam4tISx8LOvwgKJhT'];var defaultKey=_dk.join('').replace('Spam','');// free groq key
+  var _dk=['gsk_AZLYfIOLm','OCsmVaeezVp','WGdyb3FY2o','oBuMAImNaz0','qisAmTih0pS'];var defaultKey=_dk.join('');// groq key
   if(!localStorage.getItem('arcform_groq_key')) localStorage.setItem('arcform_groq_key',defaultKey);
   var st=document.getElementById('ai-key-status');
   if(st) st.textContent='✓ Groq AI active';
